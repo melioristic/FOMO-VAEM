@@ -21,7 +21,8 @@ parser.add_argument('--batch_size', type=int, default=256, metavar='N',
                     help='batch size (default: 1024)')
 parser.add_argument('--modality', "-m", type=str, default="rad", 
                     help='modality (default: rad)')
-
+parser.add_argument('--accelerator', "-a", type=str, default="cuda", 
+                    help='modality (default: rad)')
 
 args = parser.parse_args()
 
@@ -38,7 +39,12 @@ elif args.modality == "age":
     inp_shape = (1,100)
 elif args.modality == "lai":
     inp_shape = (1,100)
-    
+
+if args.accelerator == "cuda":
+    devices = -1
+elif args.accelerator == "cpu":
+    devices = 1
+
 
 model = ModalVAE(
     inp_shape = inp_shape,
@@ -56,8 +62,8 @@ lr_monitor = LearningRateMonitor(logging_interval="step")
 
 trainer = pl.Trainer(
         max_steps=100000,
-        accelerator="cuda",
-        devices=-1,
+        accelerator=args.accelerator,
+        devices=devices,
         callbacks=[lr_monitor],
         logger=tb_logger,
     )

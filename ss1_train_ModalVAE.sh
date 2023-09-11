@@ -14,4 +14,4 @@ source $EBROOTANACONDA3/etc/profile.d/conda.sh
 
 conda activate TORCH311
 
-srun python s1_train_ModalVAE.py -m lai
+srun python s1_train_ModalVAE.py -m temp

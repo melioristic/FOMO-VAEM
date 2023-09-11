@@ -17,8 +17,8 @@ class ModalVAE(pl.LightningModule):
         valid_dataset = None,
         n_step = 2, 
         dim = None,
-        batch_size = 128,
-        lr = 1e-3,
+        batch_size = 32,
+        lr = 1e-4,
         lr_scheduler_name="ReduceLROnPlateau",
         num_workers = 1,
         beta = 1.0
@@ -118,7 +118,8 @@ class ModalVAE(pl.LightningModule):
 
         if batch_idx == 0:
             n_images = 5
-            grid = torchvision.utils.make_grid(torch.concat([r[:n_images], x[:n_images]], dim=0), nrow=n_images) # plot the first n_images images.
+            img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
+            grid = torchvision.utils.make_grid(img_stack[:,:,:, None], nrow=2) # plot the first n_images images.
             self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
 
     def configure_optimizers(self):
@@ -157,7 +158,7 @@ class ModalVAE(pl.LightningModule):
         else:
             return None
     
-    def valid_dataloader(self):
+    def val_dataloader(self):
         if self.valid_dataset is not None:
             return DataLoader(
                 self.valid_dataset,
