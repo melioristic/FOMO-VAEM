@@ -18,12 +18,22 @@ class ModalVAE(pl.LightningModule):
         n_step = 2, 
         dim = None,
         batch_size = 32,
-        lr = 1e-4,
+        lr = 1e-3,
         lr_scheduler_name="ReduceLROnPlateau",
         num_workers = 1,
-        beta = 1.0
+        beta = 1e-3
         ):
         super().__init__()
+
+        self.modal_dict = {
+            "rad":(0,),
+            "precip":(1,),
+            "temp":(2,),
+            "age":(3,),
+            "lai":(4,),
+            "grouped_weather": (0,1,2),
+            "grouped_states":(3,4),
+        }
 
         self.beta = beta
         self.num_workers = num_workers
@@ -46,8 +56,6 @@ class ModalVAE(pl.LightningModule):
             self.train_kld_weight = None
             self.val_kld_weight = None
 
-
-
         self.lr = lr
         self.batch_size = batch_size
         self.modality = modality
@@ -57,35 +65,24 @@ class ModalVAE(pl.LightningModule):
             n_step = n_step
         )
 
-        self.modal_dict = {
-            "rad":0,
-            "precip":1,
-            "temp":2,
-            "age":3,
-            "lai":4
-        }
+        
 
     @torch.no_grad()
     def forward(self, batch, *args):
         
-        x = batch[0][self.modal_dict[self.modality]]
-        x = torch.permute(x, (0, 2, 1))
-        if x.shape[-1]==36:
-            x = F.pad(x, (2,2), "constant", 0)
-        elif x.shape[-1]==101:
-            x = x[:, :,1:]
+        x = torch.permute(x, (0, 2, 1 ,3))
+        if x.shape[-1]==101:
+            x = F.pad(x, (1,0), "constant", 0)
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
         
-        x = batch[0][self.modal_dict[self.modality]]
-        x = torch.permute(x, (0, 2, 1))
-        
-        if x.shape[-1]==36:
+        x = self.get_input(batch[0])
+
+        x = torch.permute(x, (0, 2, 1 ,3))
+
+        if x.shape[-1]==101:
             x = F.pad(x, (2,2), "constant", 0)
-        elif x.shape[-1]==101:
-            x = x[:, :,1:]
-        
         r, x, mu, log_var = self.model(x)
         
         loss = self.model.loss_function(r, x, mu, log_var, self.beta, self.train_kld_weight)
@@ -100,13 +97,11 @@ class ModalVAE(pl.LightningModule):
         return loss["loss"] 
 
     def validation_step(self, batch, batch_idx):
-        x = batch[0][self.modal_dict[self.modality]]
-        x = torch.permute(x, (0, 2, 1))
+        x = self.get_input(batch[0])
+        x = torch.permute(x, (0, 2, 1 ,3))
 
-        if x.shape[-1]==36:
+        if x.shape[-1]==101:
             x = F.pad(x, (2,2), "constant", 0)
-        elif x.shape[-1]==101:
-            x = x[:, :,1:]
         
         r, x, mu, log_var = self.model(x)
 
@@ -119,7 +114,8 @@ class ModalVAE(pl.LightningModule):
         if batch_idx == 0:
             n_images = 5
             img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
-            grid = torchvision.utils.make_grid(img_stack[:,:,:, None], nrow=2) # plot the first n_images images.
+                                      
+            grid = torchvision.utils.make_grid(img_stack[:,:,:, None], nrow=n_images, padding=10) # plot the first n_images images.
             self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
 
     def configure_optimizers(self):
@@ -168,3 +164,10 @@ class ModalVAE(pl.LightningModule):
             )
         else:
             return None
+        
+    def get_input(self, x):
+        
+        assert self.modality in self.modal_dict
+
+        tuple_index = self.modal_dict[self.modality]
+        return torch.stack([x[i] for i in tuple_index], axis=2)

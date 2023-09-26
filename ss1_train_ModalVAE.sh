@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH --job-name=VAEM
-#SBATCH --time=0-0:35:00
+#SBATCH --time=0-3:35:00
 #SBATCH -G nvidia-a100:1
 #SBATCH --mem-per-cpu=64G
 #SBATCH --cpus-per-task=1
@@ -14,4 +14,4 @@ source $EBROOTANACONDA3/etc/profile.d/conda.sh
 
 conda activate TORCH311
 
-srun python s1_train_ModalVAE.py -m temp
+srun python s1_train_ModalVAE.py -m lai

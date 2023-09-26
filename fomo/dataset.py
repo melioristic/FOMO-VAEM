@@ -63,4 +63,3 @@ class MultiModalDatasets(Dataset):
         X = tuple((self.xd_m[index, :, i] for i in  range(self.xd_m.shape[2]))) + tuple((self.xs_m[index, :, i] for i in  range(self.xs_m.shape[2])))
         Y = self.labels[index]
         return X, Y
-    

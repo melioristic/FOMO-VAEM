@@ -30,15 +30,15 @@ train_data = MultiModalDatasets(args.data_path, split_type = "train", xs_list = 
 val_data = MultiModalDatasets(args.data_path, split_type = "validation", xs_list = ["age","laicum"])
 
 if args.modality == "rad":
-    inp_shape = (1,36)
+    inp_shape = (1,36,1)
 elif args.modality == "precip":
-    inp_shape = (1,36)
+    inp_shape = (1,36,1)
 elif args.modality == "temp":
-    inp_shape = (1,36)
+    inp_shape = (1,36,1)
 elif args.modality == "age":
-    inp_shape = (1,100)
+    inp_shape = (1,100,1)
 elif args.modality == "lai":
-    inp_shape = (1,100)
+    inp_shape = (1,100,1)
 
 if args.accelerator == "cuda":
     devices = -1
