@@ -23,6 +23,8 @@ parser.add_argument('--modality', "-m", type=str, default="rad",
                     help='modality (default: rad)')
 parser.add_argument('--accelerator', "-a", type=str, default="cuda", 
                     help='modality (default: rad)')
+parser.add_argument('--beta', "-b", type=float, default=1e-3, 
+                    help='modality (default: 1e-3)')
 
 args = parser.parse_args()
 
@@ -39,19 +41,25 @@ elif args.modality == "age":
     inp_shape = (1,100,1)
 elif args.modality == "lai":
     inp_shape = (1,100,1)
+elif args.modality == "grouped_states":
+    inp_shape = (1,104,2)
+elif args.modality == "grouped_weather":
+    inp_shape = (1,36,3)
 
 if args.accelerator == "cuda":
     devices = -1
 elif args.accelerator == "cpu":
     devices = 1
 
+beta = float(args.beta)
 
 model = ModalVAE(
     inp_shape = inp_shape,
     modality= args.modality,
     train_dataset=train_data,
     valid_dataset= val_data,
-    batch_size=args.batch_size
+    batch_size=args.batch_size,
+    beta=beta
 )
     
 model_dir = f"/data/compoundx/anand/fomo-vaem/{args.modality}"

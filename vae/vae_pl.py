@@ -48,8 +48,6 @@ class ModalVAE(pl.LightningModule):
             self.train_kld_weight = batch_size/len_train
             self.val_kld_weight = batch_size/len_val
 
-
-
         else:
             len_train = None
             len_val = None
@@ -69,20 +67,14 @@ class ModalVAE(pl.LightningModule):
 
     @torch.no_grad()
     def forward(self, batch, *args):
-        
-        x = torch.permute(x, (0, 2, 1 ,3))
-        if x.shape[-1]==101:
-            x = F.pad(x, (1,0), "constant", 0)
+        x = self.get_input(batch[0])
+
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
         
         x = self.get_input(batch[0])
 
-        x = torch.permute(x, (0, 2, 1 ,3))
-
-        if x.shape[-1]==101:
-            x = F.pad(x, (2,2), "constant", 0)
         r, x, mu, log_var = self.model(x)
         
         loss = self.model.loss_function(r, x, mu, log_var, self.beta, self.train_kld_weight)
@@ -98,11 +90,6 @@ class ModalVAE(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = self.get_input(batch[0])
-        x = torch.permute(x, (0, 2, 1 ,3))
-
-        if x.shape[-1]==101:
-            x = F.pad(x, (2,2), "constant", 0)
-        
         r, x, mu, log_var = self.model(x)
 
         loss = self.model.loss_function(r, x, mu, log_var, self.beta, self.val_kld_weight)
@@ -114,8 +101,7 @@ class ModalVAE(pl.LightningModule):
         if batch_idx == 0:
             n_images = 5
             img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
-                                      
-            grid = torchvision.utils.make_grid(img_stack[:,:,:, None], nrow=n_images, padding=10) # plot the first n_images images.
+            grid = torchvision.utils.make_grid(img_stack[:,:,:], nrow=n_images, padding=10) # plot the first n_images images.
             self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
 
     def configure_optimizers(self):
@@ -170,4 +156,8 @@ class ModalVAE(pl.LightningModule):
         assert self.modality in self.modal_dict
 
         tuple_index = self.modal_dict[self.modality]
-        return torch.stack([x[i] for i in tuple_index], axis=2)
+        x = torch.stack([x[i] for i in tuple_index], axis=2)
+        x = torch.permute(x, (0, 3, 1 ,2))
+        if x.shape[2] == 101:
+            x = F.pad(x, (0,0,3,0), "constant", 0)
+        return x

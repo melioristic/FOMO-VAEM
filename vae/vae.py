@@ -33,7 +33,7 @@ class ResNetBlock(nn.Module):
 class DownSample(nn.Module):
     def __init__(self, in_channel, out_channel):
         super(DownSample, self).__init__()
-        self.down_sample = nn.Conv2d(in_channel, out_channel, kernel_size=3, stride=2, padding=1)
+        self.down_sample = nn.Conv2d(in_channel, out_channel, kernel_size=(3,1), stride=(2,1), padding=(1,0))
     def forward(self, x):
         return self.down_sample(x)
 
@@ -41,51 +41,55 @@ class UpSample(nn.Module):
     def __init__(self, in_channel, out_channel):
         super(UpSample, self).__init__()
         
-        self.up_sample = nn.ConvTranspose2d(in_channel, out_channel, kernel_size=3, stride=2, padding=1)
+        self.up_sample = nn.ConvTranspose2d(in_channel, out_channel, kernel_size=(3,1), stride=(2,1), padding=(1,0), output_padding = (1,0))
 
     def forward(self, x):
         return self.up_sample(x)
 
 class Encoder(nn.Module):
-    def __init__(self, in_channel, dim, n_step = 2) :
+    def __init__(self, inp_shape, latent_dim, n_step = 2) :
         super(Encoder, self).__init__()
-        
-        channel_dims =  [(1,1) for _ in range(n_step)]
+
+        in_channel, t, n_var = inp_shape
+
+        channel_dims =  [(in_channel, in_channel) for _ in range(n_step)]
         
         layers = []
-
-        if (dim!=in_channel):
-            layers.append(nn.Conv2d(in_channel, dim, kernel_size = 3, padding=1))
 
         for c_dim in channel_dims:
             layers.append(ResNetBlock(c_dim[0]))
             layers.append(DownSample(c_dim[0], c_dim[1]))
 
-        layers.append(nn.Conv2d(c_dim[1], c_dim[1], kernel_size = 3, padding=1))
+        layers.append(nn.Flatten())
+
+        layers.append(nn.Linear(in_features = inp_shape[2]*inp_shape[1]//(2**n_step), out_features=2*latent_dim))
 
         self.module_list = nn.ModuleList(layers)
 
     def forward(self, x):
-        print(x.shape)
+        
         for layer in self.module_list:
-            print(x.shape)
-            x = layer(x)
 
-        return torch.split(x, x.shape[2]//2, dim=2)
+            x = layer(x)
+        return torch.split(x, x.shape[1]//2, dim=1)
 
 class Decoder(nn.Module):
-    def __init__(self, out_channel, dim, n_step=2):
+    def __init__(self, latent_dim, out_shape, n_step=2):
         super(Decoder, self).__init__()
         
-        channel_dims =  [(1,1) for i in range(n_step)]
-        
+        out_channel, t, n_var = out_shape
+
+        channel_dims =  [(out_channel, out_channel) for i in range(n_step)]
+
         layers = []
+
+        layers.append(nn.Linear(in_features = latent_dim, out_features=out_shape[2]*out_shape[1]//(2**n_step)))
+        unflatten_shape = (1,out_shape[1]//(2**n_step), out_shape[2])
+        layers.append(nn.Unflatten(1, unflatten_shape ))
+
         for c_dim in channel_dims:
             layers.append(ResNetBlock(c_dim[0]))
             layers.append(UpSample(c_dim[0], c_dim[1]))
-
-        if (dim!=out_channel):
-            layers.append(nn.Conv2d(dim, out_channel, kernel_size = 3, padding=1))
         
         self.module_list = nn.ModuleList(layers)
     
@@ -102,10 +106,11 @@ class ConvVAE(BaseVAE):
         if dim==None:
             dim = inp_shape[0]
         
-        self.encoder = Encoder(in_channel = inp_shape[0], dim = dim, n_step = n_step)
-        self.decoder = Decoder(out_channel = inp_shape[0], dim = dim, n_step = n_step)
+        latent_dim = 8
+        self.encoder = Encoder(inp_shape, latent_dim, n_step = n_step)
+        self.decoder = Decoder(latent_dim, inp_shape,  n_step = n_step)
         
-        self.latent_dim = (inp_shape[1]/ 2**(n_step), 1)
+        self.latent_dim = latent_dim
         
 
     def forward(self,x):
@@ -124,7 +129,7 @@ class ConvVAE(BaseVAE):
         
         recons_loss = F.mse_loss(recons , x)
 
-        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = (1,2)), dim = 0)
+        kld_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim = (1,)), dim = 0)
 
         loss = recons_loss + beta * kld_weight * kld_loss
 
