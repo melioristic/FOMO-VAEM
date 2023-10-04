@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-import torch.nn.Functional as F
+import torch.nn.functional as F
 
 from vae.dist import log_normal_diag
 
@@ -21,11 +21,11 @@ class MoGPrior(nn.Module):
         self.w = nn.Parameter(torch.zeros(num_components, 1, 1))
 
     def get_params(self):
-        return self.means, self.logvars
+        return self.means, self.logvars, self.w
 
     def sample(self, batch_size):
         # mu, lof_var
-        means, logvars = self.get_params()
+        means, logvars , _ = self.get_params()
 
         # mixing probabilities
         w = F.softmax(self.w, dim=0)
@@ -46,7 +46,7 @@ class MoGPrior(nn.Module):
 
     def log_prob(self, z):
         # mu, lof_var
-        means, logvars = self.get_params()
+        means, logvars, _ = self.get_params()
 
         # mixing probabilities
         w = F.softmax(self.w, dim=0)

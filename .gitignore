@@ -164,3 +164,8 @@ cython_debug/
 lightning_logs
 lightning_logs/*
 lightning_logs/
+
+# Data
+data
+data/
+data/*

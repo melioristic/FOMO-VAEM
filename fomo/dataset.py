@@ -19,7 +19,7 @@ from torch.utils.data.dataset import Dataset
 import torch
 from fomo.io import read_benchmark_data
 from typing import Tuple
-
+import h5py
 
 if torch.cuda.is_available():
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
@@ -63,3 +63,23 @@ class MultiModalDatasets(Dataset):
         X = tuple((self.xd_m[index, :, i] for i in  range(self.xd_m.shape[2]))) + tuple((self.xs_m[index, :, i] for i in  range(self.xs_m.shape[2])))
         Y = self.labels[index]
         return X, Y
+
+class DescriptorDatasets(Dataset):
+    def __init__(self, ds_path) -> None:
+        super().__init__()
+
+   
+        with h5py.File(ds_path) as f:
+            mu_w = f["mu_w"][:]
+            mu_s = f["mu_s"][:]
+
+            bl = f["bl"][:]
+            
+        self.data = torch.Tensor(np.concatenate([mu_w, mu_s, bl[:, np.newaxis]], axis=1))
+
+    def __len__(self):
+        return self.data.shape[0]
+    
+    def __getitem__(self, index):
+    
+        return self.data[index]

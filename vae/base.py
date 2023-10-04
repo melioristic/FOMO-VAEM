@@ -82,8 +82,8 @@ class Decoder(nn.Module):
 
         if self.distribution == 'gaussian':
             b = h_d.shape[0]
-            d = h_d.shape[1]//self.num_vals
-            h_d = h_d.view(b, d, self.num_vals)
+            d = h_d.shape[1]
+            h_d = h_d.view(b, d)
             mu_d = h_d
             return [mu_d]
         
@@ -127,12 +127,13 @@ class Decoder(nn.Module):
         return x_new
 
     def log_prob(self, x, z):
+
         outs = self.decode(z)
 
         if self.distribution == 'gaussian':
             mu_d = outs[0]
             log_p = log_normal_diag_prop(x, mu_d, reduction='sum', dim=-1).sum(-1)
-        if self.distribution == 'categorical':
+        elif self.distribution == 'categorical':
             mu_d = outs[0]
             log_p = log_categorical(x, mu_d, num_classes=self.num_vals, reduction='sum', dim=-1).sum(-1)
 
@@ -181,10 +182,10 @@ class VAE(nn.Module):
         KL = (self.prior.log_prob(z) - self.encoder.log_prob(mu_e=mu_e, log_var_e=log_var_e, z=z)).sum(-1)
 
         error = 0
-        if np.isnan(RE.detach().numpy()).any():
+        if np.isnan(RE.cpu().detach().numpy()).any():
             print('RE {}'.format(RE))
             error = 1
-        if np.isnan(KL.detach().numpy()).any():
+        if np.isnan(KL.cpu().detach().numpy()).any():
             print('RE {}'.format(KL))
             error = 1
 

@@ -69,7 +69,7 @@ tb_logger = pl_loggers.TensorBoardLogger(save_dir=model_dir)
 lr_monitor = LearningRateMonitor(logging_interval="step")
 
 trainer = pl.Trainer(
-        max_steps=100000,
+        max_steps=1000000,
         accelerator=args.accelerator,
         devices=devices,
         callbacks=[lr_monitor],

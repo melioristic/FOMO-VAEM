@@ -5,7 +5,9 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision
 from torch.nn import functional as F
-from vae.base import VAE
+from vae.base import VAE, Encoder, Decoder
+from vae.net import DecoderMLP, EncoderMLP
+from vae.priors import MoGPrior
 
 from .vae import ConvVAE
 
@@ -165,9 +167,6 @@ class ModalVAE(pl.LightningModule):
 
 class DescriptorVAE(pl.LightningModule):
     def __init__(self, 
-                 encoder,
-                 decoder,
-                 prior,
                  latent_dim,
                  train_dataset = None,
                  valid_dataset = None,
@@ -199,15 +198,19 @@ class DescriptorVAE(pl.LightningModule):
         self.lr = lr
         self.batch_size = batch_size
         
+        encoder = Encoder(EncoderMLP(65, latent_dim, 256))
+        decoder = Decoder(DecoderMLP(65, latent_dim, 256))
+
+        prior = MoGPrior(latent_dim, 16, )
         self.model = VAE(encoder=encoder, decoder=decoder, prior=prior, L=latent_dim)
 
     @torch.no_grad()
     def forward(self, batch, *args):
-        x = batch[0]
+        x = batch
         return self.model(x)
     
     def training_step(self, batch, batch_idx):
-        x = batch[0]
+        x = batch
 
         loss_re, loss_kld = self.model.loss(x)
 
@@ -221,8 +224,8 @@ class DescriptorVAE(pl.LightningModule):
 
         return loss
     
-    def validations_step(self, batch, batch_idx):
-        x = batch[0]
+    def validation_step(self, batch, batch_idx):
+        x = batch
 
         loss_re, loss_kld = self.model.loss(x)
 
@@ -236,8 +239,8 @@ class DescriptorVAE(pl.LightningModule):
             r, x, z, mu_e, log_var_e  = self.model(x)
 
             n_images = 5
-            img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
-            grid = torchvision.utils.make_grid(img_stack[:,:,:], nrow=n_images, padding=10) # plot the first n_images images.
+            img_stack = torch.concat([r[:n_images, :], x[:n_images, :]], dim=0)
+            grid = torchvision.utils.make_grid(img_stack, nrow=n_images, padding=10) # plot the first n_images images.
             self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
     
     def configure_optimizers(self):
@@ -269,7 +272,6 @@ class DescriptorVAE(pl.LightningModule):
         if self.train_dataset is not None:
             return DataLoader(
                 self.train_dataset,
-                num_workers=self.num_workers,
                 batch_size=self.batch_size,
                 # shuffle=False,
             )
@@ -280,7 +282,6 @@ class DescriptorVAE(pl.LightningModule):
         if self.valid_dataset is not None:
             return DataLoader(
                 self.valid_dataset,
-                num_workers=self.num_workers,
                 batch_size=self.batch_size,
                 # shuffle=False,
             )
