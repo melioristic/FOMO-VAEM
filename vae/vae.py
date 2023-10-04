@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 
-from .base_vae import BaseVAE
+from .base import BaseVAE
 from torch.nn import functional as F
 
 
@@ -106,7 +106,7 @@ class ConvVAE(BaseVAE):
         if dim==None:
             dim = inp_shape[0]
         
-        latent_dim = 8
+        latent_dim = 32
         self.encoder = Encoder(inp_shape, latent_dim, n_step = n_step)
         self.decoder = Decoder(latent_dim, inp_shape,  n_step = n_step)
         
@@ -144,4 +144,4 @@ class ConvVAE(BaseVAE):
     def generate(self, x):
         return self.forward(x)[0]
     
-    
+

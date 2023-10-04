@@ -56,8 +56,8 @@ beta = float(args.beta)
 model = ModalVAE(
     inp_shape = inp_shape,
     modality= args.modality,
-    train_dataset=train_data,
-    valid_dataset= val_data,
+    train_dataset =train_data,
+    valid_dataset = val_data,
     batch_size=args.batch_size,
     beta=beta
 )

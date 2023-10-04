@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 import torchvision
 from torch.nn import functional as F
-
+from vae.base import VAE
 
 from .vae import ConvVAE
 
@@ -161,3 +161,128 @@ class ModalVAE(pl.LightningModule):
         if x.shape[2] == 101:
             x = F.pad(x, (0,0,3,0), "constant", 0)
         return x
+    
+
+class DescriptorVAE(pl.LightningModule):
+    def __init__(self, 
+                 encoder,
+                 decoder,
+                 prior,
+                 latent_dim,
+                 train_dataset = None,
+                 valid_dataset = None,
+                 batch_size = 64,
+                 lr = 1e-3,
+                 lr_scheduler_name = "ReduceLROnPlateau",
+                 beta = 1e-3
+                 ):
+        super().__init__()
+
+        self.beta = beta
+        self.lr_scheduler_name = lr_scheduler_name
+        self.train_dataset = train_dataset
+        self.valid_dataset = valid_dataset
+        
+        if train_dataset!=None:
+            len_train = len(self.train_dataset)
+            len_val = len(self.valid_dataset)
+
+            self.train_kld_weight = batch_size/len_train
+            self.val_kld_weight = batch_size/len_val
+
+        else:
+            len_train = None
+            len_val = None
+            self.train_kld_weight = None
+            self.val_kld_weight = None
+
+        self.lr = lr
+        self.batch_size = batch_size
+        
+        self.model = VAE(encoder=encoder, decoder=decoder, prior=prior, L=latent_dim)
+
+    @torch.no_grad()
+    def forward(self, batch, *args):
+        x = batch[0]
+        return self.model(x)
+    
+    def training_step(self, batch, batch_idx):
+        x = batch[0]
+
+        loss_re, loss_kld = self.model.loss(x)
+
+        loss =  loss_re + self.beta * self.train_kld_weight* loss_kld
+        self.log("train_loss", loss, prog_bar=True, on_epoch=True)
+        self.log("train_recon_loss", loss_re, prog_bar=True, on_epoch=True)
+        self.log("train_KLD_loss", loss_kld , prog_bar=True, on_epoch=True)
+
+        if self.trainer.global_step == 0:
+            self.log("val_loss", np.inf)
+
+        return loss
+    
+    def validations_step(self, batch, batch_idx):
+        x = batch[0]
+
+        loss_re, loss_kld = self.model.loss(x)
+
+        loss =  loss_re + self.beta * self.val_kld_weight* loss_kld
+        self.log("val_loss", loss, prog_bar=True, on_epoch=True)
+        self.log("val_recon_loss", loss_re, prog_bar=True, on_epoch=True)
+        self.log("val_KLD_loss", loss_kld , prog_bar=True, on_epoch=True)
+
+        if batch_idx == 0:
+            
+            r, x, z, mu_e, log_var_e  = self.model(x)
+
+            n_images = 5
+            img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
+            grid = torchvision.utils.make_grid(img_stack[:,:,:], nrow=n_images, padding=10) # plot the first n_images images.
+            self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
+    
+    def configure_optimizers(self):
+        # Cosine Annealing LR Scheduler
+
+        optimizer = torch.optim.AdamW(
+            list(
+                filter(
+                    lambda p: p.requires_grad,
+                    self.model.parameters(),
+                )
+            ),
+            lr=self.lr,
+        )
+        scheduler = self._get_scheduler(optimizer=optimizer)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": scheduler,
+            "monitor": "val_loss",
+            "interval":"epoch"
+        }
+    
+    def _get_scheduler(self, optimizer):
+        # for experimental purposes only. 
+        # All epoch related things are in respect to the "1x longer" epoch length.
+        return getattr(torch.optim.lr_scheduler, self.lr_scheduler_name)(optimizer=optimizer)
+        
+    def train_dataloader(self):
+        if self.train_dataset is not None:
+            return DataLoader(
+                self.train_dataset,
+                num_workers=self.num_workers,
+                batch_size=self.batch_size,
+                # shuffle=False,
+            )
+        else:
+            return None
+    
+    def val_dataloader(self):
+        if self.valid_dataset is not None:
+            return DataLoader(
+                self.valid_dataset,
+                num_workers=self.num_workers,
+                batch_size=self.batch_size,
+                # shuffle=False,
+            )
+        else:
+            return None
