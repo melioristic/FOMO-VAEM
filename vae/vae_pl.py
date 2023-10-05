@@ -240,7 +240,7 @@ class DescriptorVAE(pl.LightningModule):
 
             n_images = 5
             img_stack = torch.concat([r[:n_images, :], x[:n_images, :]], dim=0)
-            grid = torchvision.utils.make_grid(img_stack, nrow=n_images, padding=10) # plot the first n_images images.
+            grid = torchvision.utils.make_grid(img_stack, nrow=n_images, padding=20) # plot the first n_images images.
             self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
     
     def configure_optimizers(self):

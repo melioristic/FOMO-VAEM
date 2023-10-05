@@ -35,7 +35,7 @@ val_data = MultiModalDatasets('/data/compoundx/anand/benchmark-dataset/', split_
 test_data = MultiModalDatasets('/data/compoundx/anand/benchmark-dataset/', split_type = "validation", xs_list = ["age","laicum"])
 
 weather_model = ModalVAE.load_from_checkpoint("/data/compoundx/anand/fomo-vaem/grouped_weather/lightning_logs/version_4/checkpoints/epoch=199-step=100000.ckpt", map_location=torch.device("cpu"), inp_shape=(1,36,3), modality="grouped_weather", beta=0.0001, batch_size=16)
-state_model = ModalVAE.load_from_checkpoint("/data/compoundx/anand/fomo-vaem/grouped_states/lightning_logs/version_5/checkpoints/epoch=199-step=100000.ckpt", map_location=torch.device("cpu"), inp_shape=(1,104,2), modality="grouped_states", beta=0.0001, batch_size=16)
+state_model = ModalVAE.load_from_checkpoint("/data/compoundx/anand/fomo-vaem/grouped_states/lightning_logs/version_6/checkpoints/epoch=134-step=67500.ckpt", map_location=torch.device("cpu"), inp_shape=(1,104,2), modality="grouped_states", beta=0.0001, batch_size=16)
 
 
 def prep_discriptor_data(data, name):
@@ -63,4 +63,4 @@ def prep_discriptor_data(data, name):
         f.create_dataset("log_var_s", data = log_var_s)
         f.create_dataset("bl", data = bl)
 
-prep_discriptor_data(test_data, "test")
+prep_discriptor_data(val_data, "val")

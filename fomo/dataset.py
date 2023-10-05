@@ -30,12 +30,15 @@ class MultiModalDatasets(Dataset):
     def __init__(self, ds_path, pft="beech", split_type="train", xs_list = ["age", "sv", "laicum", "h", "d"], xs_year_before=3, xd_year_from=2, target = 'MBR', agg="monthly", classify=False ) -> None:
         super().__init__()
 
-        self.hist_norm = 3308488.0
+        # self.hist_norm = 3308488.0
+        self.hist_norm = 10000
         forest_data = read_benchmark_data(ds_path, pft = pft, xs_list=xs_list, xs_year_before=xs_year_before, xd_year_from=xd_year_from, target = target, agg=agg, classify = classify  )
 
         self.xd_m = torch.tensor(forest_data[split_type][0].astype(np.float32)).cpu().detach()
-        self.xs_m = torch.tensor((forest_data[split_type][1][:,:,:,np.newaxis]/self.hist_norm).astype(np.float32)).cpu().detach() # ! This number is computed from all the input and is almost equal to maxinum number of trees ever
-
+        self.xs_m = torch.tensor((forest_data[split_type][1][:,:,:,np.newaxis]/self.hist_norm).astype(np.float32)).cpu().detach()
+        mean = torch.mean(self.xs_m, axis=0)
+        self.xs_m = torch.tensor(self.xs_m - mean)
+        
         self.labels = torch.tensor(forest_data[split_type][2][:].astype(np.float32)).cpu().detach()
         
         self.n_modalities = self.xd_m.shape[2] + self.xs_m.shape[2]
@@ -43,7 +46,7 @@ class MultiModalDatasets(Dataset):
         self.bins = forest_data["bins"]
         self.mean_Xd = forest_data["mean_Xd"]
         self.std_Xd = forest_data["std_Xd"]
-
+        self.mean_Xs = mean
     def get_n_modalities(self)->int:
         return self.n_modalities
     
@@ -74,7 +77,13 @@ class DescriptorDatasets(Dataset):
             mu_s = f["mu_s"][:]
 
             bl = f["bl"][:]
-            
+
+        bl = np.log(bl)
+        self.mean = bl.mean()
+        self.std  = bl.std()
+
+        bl = (bl-self.mean)/self.std
+
         self.data = torch.Tensor(np.concatenate([mu_w, mu_s, bl[:, np.newaxis]], axis=1))
 
     def __len__(self):
