@@ -151,7 +151,7 @@ class Decoder(nn.Module):
         if type == 'log_prob':
             return self.log_prob(x, z)
         else:
-            return self.sample(x)
+            return self.sample(z)
         
 
 class VAE(nn.Module):

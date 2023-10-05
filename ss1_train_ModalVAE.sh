@@ -17,4 +17,4 @@ conda activate TORCH311
 # python s1_train_ModalVAE.py -m grouped_weather -b 0.0001 
 
 
-python s1_train_ModalVAE.py -m grouped_states -b 0.0001
+python s1_train_ModalVAE.py -m grouped_states -b 0.00001
