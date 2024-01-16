@@ -19,7 +19,7 @@ class ModalVAE(pl.LightningModule):
         valid_dataset = None,
         n_step = 2, 
         dim = None,
-        batch_size = 32,
+        batch_size = 256,
         lr = 1e-3,
         lr_scheduler_name="ReduceLROnPlateau",
         num_workers = 1,
