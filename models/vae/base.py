@@ -5,7 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 
-from vae.dist import log_normal_diag, log_categorical, log_bernoulli, log_normal_diag_prop
+from .dist import log_normal_diag, log_categorical, log_bernoulli, log_normal_diag_prop
 
 
 class RoundStraightThrough(torch.autograd.Function):

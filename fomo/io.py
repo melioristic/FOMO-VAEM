@@ -1,7 +1,12 @@
 import h5py
 import numpy as np
 
-def read_benchmark_data(ds_path, pft="beech", xs_year_before = 3,  xd_year_from = 2,   xs_list=["age"], classify = False, target= 'MBR', normalize_xd = True, agg="monthly"):
+
+def norm(arr, mean, std):
+    arr = (arr - mean)/std
+    return np.nan_to_num(arr)
+
+def read_benchmark_data(ds_path, pft="beech", xs_year_before = 3,  xd_year_from = 2,   xs_list=["age"], classify = False, target= 'MBR', agg="monthly", normalize_xd = True, normalize_xs = True):
     
     n_years = 3
     percentile = 90
@@ -15,29 +20,39 @@ def read_benchmark_data(ds_path, pft="beech", xs_year_before = 3,  xd_year_from 
     file_path = ds_path + f"test_{target}_{pft}_{agg}_{n_years}_years_10000ha.h5"
     Xd_test, Xs_test, Y_test, bins = _read_single_file(file_path=file_path, xs_year_before=xs_year_before, xd_year_from=xd_year_from, xs_list=xs_list)
     
-    t = np.percentile(Y_train, percentile)
+    t = np.percentile(Y_train, percentile, axis=0)
 
     if classify == True:
-    
-        Y_train = np.where(Y_train>t, 1, 0)
-        Y_val = np.where(Y_val>t, 1, 0)
-        Y_test = np.where(Y_test>t, 1, 0)
+        
+        # This is interesting in case of two dimensional arrays
+
+        for i in range(Y_train.shape[1]):    
+            Y_train[:,i] = np.where(Y_train[:,i]>t[i], 1, 0)
+            Y_val[:,i] = np.where(Y_val[:,i]>t[i], 1, 0)
+            Y_test[:,i] = np.where(Y_test[:,i]>t[i], 1, 0)
 
     
     if normalize_xd:
         mean_Xd = Xd_train.mean(axis = 0 )
         std_Xd = Xd_train.std(axis = 0)
 
-        Xd_train = (Xd_train - mean_Xd)/std_Xd
-        Xd_val = (Xd_val - mean_Xd)/std_Xd
-        Xd_test = (Xd_test - mean_Xd)/std_Xd
+        mean_Xs = Xs_train.mean(axis = 0)
+        std_Xs = Xs_train.std(axis = 0)
 
+        Xd_train = norm(Xd_train, mean_Xd, std_Xd) 
+        Xd_val = norm(Xd_val, mean_Xd, std_Xd) 
+        Xd_test = norm(Xd_test, mean_Xd, std_Xd) 
+
+
+        Xs_train = norm(Xs_train, mean_Xs, std_Xs) 
+        Xs_val = norm(Xs_val, mean_Xs, std_Xs) 
+        Xs_test = norm(Xs_test, mean_Xs, std_Xs) 
 
     train = Xd_train, Xs_train[:, :,:], Y_train
     val = Xd_val, Xs_val[:, :,:], Y_val
     test = Xd_test, Xs_test[:, :,:], Y_test
 
-    return {"train":train, "validation":val, "test":test, "bins":bins[:], "mean_Xd":mean_Xd, "std_Xd":std_Xd}
+    return {"train":train, "validation":val, "test":test, "bins":bins[:], "mean_Xd":mean_Xd, "std_Xd":std_Xd,  "mean_Xs":mean_Xd, "std_Xs":std_Xd}
 
 
 def _read_single_file(file_path, xs_year_before, xd_year_from, xs_list):

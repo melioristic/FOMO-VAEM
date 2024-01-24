@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from vae.dist import log_normal_diag
+from .dist import log_normal_diag
 
     
 class MoGPrior(nn.Module):

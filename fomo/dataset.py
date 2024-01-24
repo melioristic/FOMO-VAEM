@@ -31,13 +31,14 @@ class MultiModalDatasets(Dataset):
         super().__init__()
 
         # self.hist_norm = 3308488.0
-        self.hist_norm = 10000
-        forest_data = read_benchmark_data(ds_path, pft = pft, xs_list=xs_list, xs_year_before=xs_year_before, xd_year_from=xd_year_from, target = target, agg=agg, classify = classify  )
+        self.hist_norm = 1
+        forest_data = read_benchmark_data(ds_path, pft = pft, xs_list=xs_list, xs_year_before=xs_year_before, xd_year_from=xd_year_from, target = target, agg=agg, classify = classify)
 
         self.xd_m = torch.tensor(forest_data[split_type][0].astype(np.float32)).cpu().detach()
         self.xs_m = torch.tensor((forest_data[split_type][1][:,:,:,np.newaxis]/self.hist_norm).astype(np.float32)).cpu().detach()
         mean = torch.mean(self.xs_m, axis=0)
-        self.xs_m = torch.tensor(self.xs_m - mean)
+        
+        self.xs_m = self.xs_m - mean
         
         self.labels = torch.tensor(forest_data[split_type][2][:].astype(np.float32)).cpu().detach()
         

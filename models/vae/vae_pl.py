@@ -3,11 +3,11 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
-import torchvision
+# import torchvision
 from torch.nn import functional as F
-from vae.base import VAE, Encoder, Decoder
-from vae.net import DecoderMLP, EncoderMLP
-from vae.priors import MoGPrior
+from .base import VAE, Encoder, Decoder
+from .net import DecoderMLP, EncoderMLP
+from .priors import MoGPrior
 
 from .vae import ConvVAE
 
@@ -100,11 +100,11 @@ class ModalVAE(pl.LightningModule):
         self.log("val_recon_loss", loss["recon_loss"], prog_bar=True, on_epoch=True)
         self.log("val_KLD_loss", loss["KLD_loss"] , prog_bar=True, on_epoch=True)
 
-        if batch_idx == 0:
-            n_images = 5
-            img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
-            grid = torchvision.utils.make_grid(img_stack[:,:,:], nrow=n_images, padding=10) # plot the first n_images images.
-            self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
+        # if batch_idx == 0:
+        #     n_images = 5
+        #     img_stack = torch.concat([r[:n_images, :, :], x[:n_images, :, :]], dim=0)
+        #     grid = torchvision.utils.make_grid(img_stack[:,:,:], nrow=n_images, padding=10) # plot the first n_images images.
+        #     self.logger.experiment.add_image('generated_images', grid, self.current_epoch)
 
     def configure_optimizers(self):
         # Cosine Annealing LR Scheduler
@@ -220,7 +220,7 @@ class DescriptorVAE(pl.LightningModule):
         self.log("train_KLD_loss", loss_kld , prog_bar=True, on_epoch=True)
 
         if self.trainer.global_step == 0:
-            self.log("val_loss", np.inf)
+            self.log("train_loss", np.inf)
 
         return loss
     

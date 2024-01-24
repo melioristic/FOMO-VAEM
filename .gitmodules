@@ -1,0 +1,6 @@
+[submodule "models/ccvae"]
+	path = models/ccvae
+	url = https://github.com/melioristic/ccvae_pytorch
+[submodule "models/transformer"]
+	path = models/transformer
+	url = https://github.com/melioristic/transformer
